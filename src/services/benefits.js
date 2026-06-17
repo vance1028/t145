@@ -11,6 +11,16 @@ function parseDate(dateStr) {
   return new Date(dateStr);
 }
 
+function startOfDay(d) {
+  const date = parseDate(d);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+}
+
+function endOfDay(d) {
+  const date = parseDate(d);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+}
+
 function formatDate(d) {
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -62,9 +72,9 @@ function nextSlotBoundary(minutesOfDay, slot) {
 }
 
 function isCardInDate(card, dateTime) {
-  const d = new Date(dateTime);
-  const startDate = new Date(card.startDate + 'T00:00:00');
-  const endDate = new Date(card.endDate + 'T23:59:59.999');
+  const d = parseDate(dateTime);
+  const startDate = startOfDay(card.startDate);
+  const endDate = endOfDay(card.endDate);
   return d >= startDate && d <= endDate;
 }
 
@@ -89,14 +99,14 @@ async function isCardInScope(card, lotId) {
 function splitFreeAndPaidSegments(enterTime, exitTime, freeSlots) {
   const enter = parseDate(enterTime);
   const exit = parseDate(exitTime);
+  const totalMinutes = Math.max(0, Math.round((exit - enter) / MS_PER_MINUTE));
 
   if (!freeSlots || !freeSlots.length) {
     return {
-      freeMinutes: 0,
-      paidMinutes: Math.max(0, Math.round((exit - enter) / MS_PER_MINUTE)),
+      freeMinutes: totalMinutes,
+      paidMinutes: 0,
       segments: [
-        { type: 'PAID', startTime: formatDate(enter), endTime: formatDate(exit),
-          minutes: Math.max(0, Math.round((exit - enter) / MS_PER_MINUTE)) },
+        { type: 'FREE', startTime: formatDate(enter), endTime: formatDate(exit), minutes: totalMinutes },
       ],
     };
   }
@@ -227,9 +237,9 @@ async function findBestMonthlyCard(plateNo, lotId, enterTime, exitTime) {
 }
 
 function calculateRefund(card, refundDateStr) {
-  const refundDate = new Date(refundDateStr);
-  const startDate = new Date(card.startDate + 'T00:00:00');
-  const endDate = new Date(card.endDate + 'T23:59:59.999');
+  const refundDate = parseDate(refundDateStr);
+  const startDate = startOfDay(card.startDate);
+  const endDate = endOfDay(card.endDate);
 
   if (refundDate <= startDate) {
     return { refundCents: card.priceCents, usedDays: 0, totalDays: card.durationDays };

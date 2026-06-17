@@ -10,6 +10,14 @@ const { hashPassword } = require('../utils/password');
 
 /* ----------------------------- 映射 ----------------------------- */
 
+function safeJsonParse(val) {
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'string') {
+    try { return JSON.parse(val); } catch (e) { return null; }
+  }
+  return val;
+}
+
 function mapUser(r) {
   if (!r) return null;
   return {
@@ -261,7 +269,7 @@ function mapMonthlyCard(r) {
   return {
     id: r.id, cardNo: r.card_no, name: r.name, cardType: r.card_type,
     scopeType: r.scope_type, priceCents: r.price_cents, durationDays: r.duration_days,
-    freeSlots: r.free_slots ? JSON.parse(r.free_slots) : null,
+    freeSlots: safeJsonParse(r.free_slots),
     maxVehicles: r.max_vehicles, concurrentQuota: r.concurrent_quota,
     startDate: r.start_date, endDate: r.end_date, status: r.status,
     ownerName: r.owner_name, phone: r.phone, refundedCents: r.refunded_cents,
@@ -524,7 +532,7 @@ function mapDeductionRecord(r) {
     freeMinutes: r.free_minutes,
     deductedMinutes: r.deducted_minutes, deductedTimes: r.deducted_times,
     deductedCents: r.deducted_cents, paidCents: r.paid_cents,
-    breakdown: r.breakdown ? JSON.parse(r.breakdown) : null,
+    breakdown: safeJsonParse(r.breakdown),
     createdAt: r.created_at,
   };
 }

@@ -32,6 +32,18 @@ router.get('/', async (req, res, next) => {
   } catch (e) { return next(e); }
 });
 
+router.get('/deductions', async (req, res, next) => {
+  try {
+    const { plateNo, sessionId, sourceType, sourceId } = req.query;
+    const filter = {};
+    if (plateNo) filter.plateNo = plateNo;
+    if (sessionId !== undefined) filter.sessionId = Number(sessionId);
+    if (sourceType) filter.sourceType = sourceType;
+    if (sourceId !== undefined) filter.sourceId = Number(sourceId);
+    return sendData(res, 200, await store.listDeductionRecords(filter));
+  } catch (e) { return next(e); }
+});
+
 router.get('/:id', async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
@@ -105,18 +117,6 @@ router.post('/:id/deduct', requireRole('ADMIN', 'OPERATOR'), async (req, res, ne
       return sendError(res, 400, result.reason);
     }
     return sendData(res, 200, result);
-  } catch (e) { return next(e); }
-});
-
-router.get('/deductions', async (req, res, next) => {
-  try {
-    const { plateNo, sessionId, sourceType, sourceId } = req.query;
-    const filter = {};
-    if (plateNo) filter.plateNo = plateNo;
-    if (sessionId !== undefined) filter.sessionId = Number(sessionId);
-    if (sourceType) filter.sourceType = sourceType;
-    if (sourceId !== undefined) filter.sourceId = Number(sourceId);
-    return sendData(res, 200, await store.listDeductionRecords(filter));
   } catch (e) { return next(e); }
 });
 
