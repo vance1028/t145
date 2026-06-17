@@ -61,3 +61,107 @@ CREATE TABLE IF NOT EXISTS parking_sessions (
   INDEX idx_session_status (status),
   INDEX idx_session_plate (plate_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* ===== 月卡模块 ===== */
+
+CREATE TABLE IF NOT EXISTS monthly_cards (
+  id                INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  card_no           VARCHAR(32) NOT NULL UNIQUE,
+  name              VARCHAR(128) NOT NULL DEFAULT '',
+  card_type         VARCHAR(16) NOT NULL DEFAULT 'STANDARD',
+  scope_type        VARCHAR(16) NOT NULL DEFAULT 'SINGLE_LOT',
+  price_cents       INT NOT NULL DEFAULT 0,
+  duration_days     INT NOT NULL DEFAULT 30,
+  free_slots        JSON NULL,
+  max_vehicles      INT NOT NULL DEFAULT 1,
+  concurrent_quota  INT NOT NULL DEFAULT 0,
+  start_date        DATE NOT NULL,
+  end_date          DATE NOT NULL,
+  status            VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
+  owner_name        VARCHAR(64) NOT NULL DEFAULT '',
+  phone             VARCHAR(32) NOT NULL DEFAULT '',
+  refunded_cents    INT NOT NULL DEFAULT 0,
+  created_at        DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at        DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  INDEX idx_card_status (status),
+  INDEX idx_card_dates (start_date, end_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS monthly_card_vehicles (
+  id          INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  card_id     INT UNSIGNED NOT NULL,
+  plate_no    VARCHAR(16) NOT NULL,
+  created_at  DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uk_card_plate (card_id, plate_no),
+  INDEX idx_plate (plate_no),
+  CONSTRAINT fk_mcv_card FOREIGN KEY (card_id) REFERENCES monthly_cards(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS monthly_card_scopes (
+  id          INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  card_id     INT UNSIGNED NOT NULL,
+  lot_id      INT UNSIGNED NULL,
+  district    VARCHAR(64) NULL,
+  created_at  DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_mcs_card FOREIGN KEY (card_id) REFERENCES monthly_cards(id) ON DELETE CASCADE,
+  CONSTRAINT fk_mcs_lot FOREIGN KEY (lot_id) REFERENCES parking_lots(id) ON DELETE SET NULL,
+  INDEX idx_card (card_id),
+  INDEX idx_lot (lot_id),
+  INDEX idx_district (district)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS monthly_card_transactions (
+  id          INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  card_id     INT UNSIGNED NOT NULL,
+  trans_type  VARCHAR(16) NOT NULL,
+  amount_cents INT NOT NULL DEFAULT 0,
+  days        INT NOT NULL DEFAULT 0,
+  operator    VARCHAR(64) NOT NULL DEFAULT '',
+  remark      VARCHAR(255) NOT NULL DEFAULT '',
+  created_at  DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_mct_card FOREIGN KEY (card_id) REFERENCES monthly_cards(id) ON DELETE CASCADE,
+  INDEX idx_card (card_id),
+  INDEX idx_type (trans_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* ===== 套餐模块 ===== */
+
+CREATE TABLE IF NOT EXISTS packages (
+  id                    INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  package_no            VARCHAR(32) NOT NULL UNIQUE,
+  name                  VARCHAR(128) NOT NULL DEFAULT '',
+  package_type          VARCHAR(16) NOT NULL DEFAULT 'TIMES',
+  plate_no              VARCHAR(16) NOT NULL,
+  total_amount_cents    INT NOT NULL DEFAULT 0,
+  remaining_amount_cents INT NOT NULL DEFAULT 0,
+  total_times           INT NOT NULL DEFAULT 0,
+  remaining_times       INT NOT NULL DEFAULT 0,
+  total_minutes         INT NOT NULL DEFAULT 0,
+  remaining_minutes     INT NOT NULL DEFAULT 0,
+  purchased_at          DATETIME(3) NOT NULL,
+  expires_at            DATETIME(3) NULL,
+  status                VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
+  created_at            DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  INDEX idx_plate (plate_no),
+  INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* ===== 抵扣流水 ===== */
+
+CREATE TABLE IF NOT EXISTS deduction_records (
+  id                  INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  session_id          INT UNSIGNED NULL,
+  plate_no            VARCHAR(16) NOT NULL,
+  source_type         VARCHAR(16) NOT NULL,
+  source_id           INT UNSIGNED NOT NULL,
+  free_minutes        INT NOT NULL DEFAULT 0,
+  deducted_minutes    INT NOT NULL DEFAULT 0,
+  deducted_times      INT NOT NULL DEFAULT 0,
+  deducted_cents      INT NOT NULL DEFAULT 0,
+  paid_cents          INT NOT NULL DEFAULT 0,
+  breakdown           JSON NULL,
+  created_at          DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  INDEX idx_session (session_id),
+  INDEX idx_plate (plate_no),
+  INDEX idx_source (source_type, source_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
